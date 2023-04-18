@@ -3,7 +3,7 @@ class MarketplaceParser {
     //https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=hash_name&sort_dir=desc&appid=730&norender=2&count=1&start=10
     static baseUrl = 'https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=hash_name&sort_dir=desc&norender=2'
 
-    constructor(appid, proxy, onParserStop) {
+    constructor(appid, proxy, onParserStop, dbClient) {
         if (!appid || !proxy)
             throw new Error('Missing required parameter[s]');
         this.appid = appid;
@@ -13,6 +13,8 @@ class MarketplaceParser {
         this.currentPage = 0;
         this.intervalId = undefined;
         this.onParserStop = onParserStop;
+        this.dbClient = dbClient;
+        this.dbClient.connect();
     }
 
     sendRequest(marketUrl) {
@@ -33,11 +35,12 @@ class MarketplaceParser {
 
     parseAllItems() {
         this.getItemsCount().then(count => {
-            this.intervalId = setInterval(() => {
+            this.intervalId = setInterval(async () => {
                 if (this.currentPage < (count / this.itemsPerPage)) {
-                    this.parsePage(this.currentPage++).then(response => {
+
+                    await this.parsePage(this.currentPage++).then(response => {
                         if (response['success'] === true) {
-                            this.writePageToDB(response['results']);
+                            return this.writePageToDB(response['results']);
                         } else {
                             console.log('------------------success false');
                             console.log(response);
@@ -54,14 +57,19 @@ class MarketplaceParser {
 
     stop() {
         console.log('Stopping parser for appid = ' + this.appid);
+
         clearInterval(this.intervalId);
+        this.dbClient.disconnect();
+
         if (this.onParserStop !== undefined) {
             this.onParserStop();
         }
     }
 
-    writePageToDB(resultArray) {
-        //resultArray.forEach(console.log);
+    async writePageToDB(resultArray) {
+        for (let item of resultArray) {
+            await this.dbClient.insertOrUpdateItem(item);
+        }
     }
 }
 

@@ -4,6 +4,7 @@ import cors from "cors";
 import ProxyUtils from "../proxy-utils/proxy-utils/proxy_manager.js";
 import MarketplaceParser from "./MarketplaceParser/MarketplaceParser.js";
 import * as dotenv from "dotenv";
+import PostgresClient from "./PostgresClient/PostgresClient.js";
 
 dotenv.config();
 
@@ -26,7 +27,7 @@ app.get('/start', (req, res) => {
     if (parsers[appid] !== undefined) {
         res.send('{"status": false, "info": "parser with given appid already working"}');
     } else {
-        const parser = new MarketplaceParser(appid, proxyManager, onParserStop);
+        const parser = new MarketplaceParser(appid, proxyManager, onParserStop, new PostgresClient());
         parsers[appid] = parser;
         parser.parseAllItems();
         res.send('{"status": true, "info": "parser started working"}')
