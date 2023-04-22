@@ -32,8 +32,8 @@ class PostgresClient {
         return this.client.end();
     }
 
-    testSelect() {
-        this.client.query({ ...PostgresClient.selectQuery, values: ['test', 1]} )
+    testSelect(hashName, appid) {
+        return this.client.query({ ...PostgresClient.selectQuery, values: [hashName ?? 'test', appid ?? 1]} )
             .then(console.log)
             .catch(console.log)
     }

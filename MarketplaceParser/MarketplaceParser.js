@@ -1,24 +1,32 @@
 
 class MarketplaceParser {
     //https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=hash_name&sort_dir=desc&appid=730&norender=2&count=1&start=10
-    static baseUrl = 'https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=hash_name&sort_dir=desc&norender=2'
+    static baseItemsListUrl = 'https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=hash_name&sort_dir=desc&norender=2'
+    //https://steamcommunity.com/market/listings/730/Revolution%20Case
+    static baseItemUrl = 'https://steamcommunity.com/market/listings';
 
-    constructor(appid, proxy, onParserStop, dbClient) {
+    static pageTimeout = 5000;
+    constructor(appid, proxy, onParserStop, dbClient, pageTimeout) {
         if (!appid || !proxy)
             throw new Error('Missing required parameter[s]');
         this.appid = appid;
         this.proxyManager = proxy;
-        this.appUrl = MarketplaceParser.baseUrl + '&appid=' + appid;
+        this.appUrl = MarketplaceParser.baseItemsListUrl + '&appid=' + appid;
         this.itemsPerPage = 100;
         this.currentPage = 0;
         this.intervalId = undefined;
         this.onParserStop = onParserStop;
         this.dbClient = dbClient;
         this.dbClient.connect();
+        this.pageTimeout = pageTimeout;
     }
 
     sendRequest(marketUrl) {
         return this.proxyManager.fetch(marketUrl);
+    }
+
+    sendRequestText(marketUrl) {
+        return this.proxyManager.fetchText(marketUrl);
     }
 
     getItemsCount() {
@@ -51,7 +59,7 @@ class MarketplaceParser {
                     console.log('---------------------all items fetched');
                     this.stop();
                 }
-            }, 5000);
+            }, this.pageTimeout ?? MarketplaceParser.pageTimeout);
         });
     }
 
@@ -70,6 +78,15 @@ class MarketplaceParser {
         for (let item of resultArray) {
             await this.dbClient.insertOrUpdateItem(item);
         }
+    }
+
+    getItemId(hashName) {
+        return this.sendRequestText(`${MarketplaceParser.baseItemUrl}/${this.appid}/${encodeURIComponent(hashName)}`)
+            .then(page => page.match(/Market_LoadOrderSpread\( *(\d+) *\)/)?.[1])
+            .catch(err => {
+                console.log(err);
+                return undefined;
+            })
     }
 }
 
