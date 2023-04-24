@@ -21,7 +21,7 @@ const proxyManager = new ProxyUtils(proxyArray, proxyKey);
 const onParserStop = (appid) => {
     parsers[appid] = undefined;
 }
-app.get('/start', (req, res) => {
+app.get('/startParseNames', (req, res) => {
     res.status(200);
     const appid = req.query.appid;
     if (parsers[appid] !== undefined) {
@@ -30,9 +30,22 @@ app.get('/start', (req, res) => {
         const parser = new MarketplaceParser(appid, proxyManager, onParserStop, new PostgresClient());
         parsers[appid] = parser;
         parser.parseAllItems();
-        res.send('{"status": true, "info": "parser started working"}')
+        res.send('{"status": true, "info": "parser of names started working"}')
     }
 });
+
+app.get('/startParseIds', (req, res) => {
+    res.status(200);
+    const appid = req.query.appid;
+    if (parsers[appid] !== undefined) {
+        res.send('{"status": false, "info": "parser with given appid already working"}');
+    } else {
+        const parser = new MarketplaceParser(appid, proxyManager, onParserStop, new PostgresClient());
+        parsers[appid] = parser;
+        parser.fillItemIds();
+        res.send('{"status": true, "info": "parser of ids started working"}')
+    }
+})
 
 app.get('/stop', (req, res) => {
     res.status(200);

@@ -20,6 +20,24 @@ class PostgresClient {
         values: [],
     };
 
+    static countByAppQuery = {
+        name: 'select count of items by app id',
+        text: "select count(*) from item where appid=$1",
+        values: [],
+    };
+
+    static getItemsByAppQuery = {
+        name: 'select items by appid',
+        text: "select id, hash_name from item where appid=$1 and steamid is null order by hash_name limit 1000 offset 1000*$2",
+        values: [],
+    };
+
+    static updateItemIdQuery = {
+        name: 'update item id',
+        text: "update item set steamid=$1 where id=$2",
+        values: [],
+    };
+
     constructor() {
         this.client = new Client();
     }
@@ -75,6 +93,24 @@ class PostgresClient {
                 });
             })
             .catch(console.log)
+    }
+
+    getCountOfItems(appid) {
+        return this.client.query({
+            ...PostgresClient.countByAppQuery, values: [appid],
+        }).then(res => res.rows[0]['count']);
+    }
+
+    getItemsByApp(appid, page) {
+        return this.client.query({
+            ...PostgresClient.getItemsByAppQuery, values: [appid, page],
+        }).then(res => res.rows);
+    }
+
+    updateItemId(steamId, itemId) {
+        return this.client.query({
+            ...PostgresClient.updateItemIdQuery, values: [steamId, itemId],
+        });
     }
 }
 

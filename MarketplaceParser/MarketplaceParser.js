@@ -1,7 +1,7 @@
 
 class MarketplaceParser {
     //https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=hash_name&sort_dir=desc&appid=730&norender=2&count=1&start=10
-    static baseItemsListUrl = 'https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=hash_name&sort_dir=desc&norender=2'
+    static baseItemsListUrl = 'https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=popular&sort_dir=desc&norender=2'
     //https://steamcommunity.com/market/listings/730/Revolution%20Case
     static baseItemUrl = 'https://steamcommunity.com/market/listings';
 
@@ -38,7 +38,7 @@ class MarketplaceParser {
     }
 
     parsePage(page) {
-        return this.sendRequest(`${this.appUrl}&count=${this.itemsPerPage}&start=${page}`);
+        return this.sendRequest(`${this.appUrl}&count=${this.itemsPerPage}&start=${page * this.itemsPerPage}`);
     }
 
     parseAllItems() {
@@ -60,7 +60,7 @@ class MarketplaceParser {
                     this.stop();
                 }
             }, this.pageTimeout ?? MarketplaceParser.pageTimeout);
-        });
+        }).then(() => this.stop(), () => this.stop());
     }
 
     stop() {
@@ -87,6 +87,35 @@ class MarketplaceParser {
                 console.log(err);
                 return undefined;
             })
+    }
+
+    fillItemId(item) {
+        return this.getItemId(item['hash_name']).then(steamId => this.dbClient.updateItemId(item['id'], steamId));
+    }
+
+    timeout(ms) {
+        return (new Promise(resolve => setTimeout(resolve, ms)));
+    }
+
+    fillItemIds() {
+        this.dbClient.getCountOfItems(this.appid)
+            .then(async count => {
+
+                let page = 0;
+                while (page < count / 1000) {
+
+                    await this.dbClient.getItemsByApp(this.appid, page).then(async items => {
+                        for (let item in items) {
+                            await this.fillItemId(item).then(() => this.timeout(250)).catch(err => {
+                                console.error('error getting steamid for ' + item['id']);
+                                console.error(err);
+                                throw err;
+                            });
+                        }
+                    });
+                    page++;
+                }
+            }).then(() => this.stop(), () => this.stop());
     }
 }
 
