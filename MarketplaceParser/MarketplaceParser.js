@@ -66,11 +66,13 @@ class MarketplaceParser {
     stop() {
         console.log('Stopping parser for appid = ' + this.appid);
 
-        clearInterval(this.intervalId);
+        if (this.intervalId !== undefined) {
+            clearInterval(this.intervalId);
+        }
         this.dbClient.disconnect();
 
         if (this.onParserStop !== undefined) {
-            this.onParserStop();
+            this.onParserStop(this.appid);
         }
     }
 
@@ -84,13 +86,13 @@ class MarketplaceParser {
         return this.sendRequestText(`${MarketplaceParser.baseItemUrl}/${this.appid}/${encodeURIComponent(hashName)}`)
             .then(page => page.match(/Market_LoadOrderSpread\( *(\d+) *\)/)?.[1])
             .catch(err => {
-                console.log(err);
+                console.error(err);
                 return undefined;
             })
     }
 
     fillItemId(item) {
-        return this.getItemId(item['hash_name']).then(steamId => this.dbClient.updateItemId(item['id'], steamId));
+        return this.getItemId(item['hash_name']).then(steamId => this.dbClient.updateItemId(steamId, item['id']));
     }
 
     timeout(ms) {
@@ -105,7 +107,7 @@ class MarketplaceParser {
                 while (page < count / 1000) {
 
                     await this.dbClient.getItemsByApp(this.appid, page).then(async items => {
-                        for (let item in items) {
+                        for (let item of items) {
                             await this.fillItemId(item).then(() => this.timeout(250)).catch(err => {
                                 console.error('error getting steamid for ' + item['id']);
                                 console.error(err);

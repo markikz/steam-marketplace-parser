@@ -4,37 +4,37 @@ const {Client} = pg;
 class PostgresClient {
     static selectQuery = {
         name: 'select item count',
-        text: "select id from item where hash_name=$1 and appid=$2",
+        text: "select id from steam_info.item where hash_name=$1 and appid=$2",
         values: [],
     };
 
     static insertQuery = {
         name: 'insert new item',
-        text: "insert into item(hash_name, sell_price, currency, sell_listings, appid) values($1, $2, $3, $4, $5)",
+        text: "insert into steam_info.item(hash_name, sell_price, currency, sell_listings, appid) values($1, $2, $3, $4, $5)",
         values: [],
     };
 
     static updateQuery = {
         name: 'update item',
-        text: "update item set sell_price=$1, currency=$2, sell_listings=$3, update_date=CURRENT_TIMESTAMP where id=$4",
+        text: "update steam_info.item set sell_price=$1, currency=$2, sell_listings=$3, update_date=CURRENT_TIMESTAMP where id=$4",
         values: [],
     };
 
     static countByAppQuery = {
         name: 'select count of items by app id',
-        text: "select count(*) from item where appid=$1",
+        text: "select count(*) as count from steam_info.item where appid=$1",
         values: [],
     };
 
     static getItemsByAppQuery = {
         name: 'select items by appid',
-        text: "select id, hash_name from item where appid=$1 and steamid is null order by hash_name limit 1000 offset 1000*$2",
+        text: "select id, hash_name from steam_info.item where appid=$1 and steamid is null order by hash_name limit 1000 offset 1000*$2",
         values: [],
     };
 
     static updateItemIdQuery = {
         name: 'update item id',
-        text: "update item set steamid=$1 where id=$2",
+        text: "update steam_info.item set steamid=$1 where id=$2",
         values: [],
     };
 
@@ -48,24 +48,6 @@ class PostgresClient {
 
     disconnect() {
         return this.client.end();
-    }
-
-    testSelect(hashName, appid) {
-        return this.client.query({ ...PostgresClient.selectQuery, values: [hashName ?? 'test', appid ?? 1]} )
-            .then(console.log)
-            .catch(console.log)
-    }
-
-    testInsert() {
-        this.client.query({ ...PostgresClient.insertQuery, values: ['test', 1, 1, 1, 1]} )
-            .then(console.log)
-            .catch(console.log)
-    }
-
-    testUpdate(id) {
-        this.client.query({ ...PostgresClient.updateQuery, values: [2, 2, 2, id]} )
-            .then(console.log)
-            .catch(console.log)
     }
 
     async insertOrUpdateItem(itemJson) {
@@ -98,7 +80,10 @@ class PostgresClient {
     getCountOfItems(appid) {
         return this.client.query({
             ...PostgresClient.countByAppQuery, values: [appid],
-        }).then(res => res.rows[0]['count']);
+        }).then(res => {
+            console.log(res);
+            return res.rows[0]['count'];
+        }).catch(console.error);
     }
 
     getItemsByApp(appid, page) {
@@ -108,9 +93,41 @@ class PostgresClient {
     }
 
     updateItemId(steamId, itemId) {
+        console.log({updateId: {steamId, itemId}});
         return this.client.query({
             ...PostgresClient.updateItemIdQuery, values: [steamId, itemId],
         });
+    }
+
+
+    testSelect(hashName, appid) {
+        return this.client.query({ ...PostgresClient.selectQuery, values: [hashName ?? 'test', appid ?? 1]} )
+            .then(console.log)
+            .catch(console.log)
+    }
+
+    testInsert() {
+        this.client.query({ ...PostgresClient.insertQuery, values: ['test', 1, 1, 1, 1]} )
+            .then(console.log)
+            .catch(console.log)
+    }
+
+    testUpdate(id) {
+        this.client.query({ ...PostgresClient.updateQuery, values: [2, 2, 2, id]} )
+            .then(console.log)
+            .catch(console.log)
+    }
+
+    testJsonInsert(object) {
+        return this.client.query("insert into steam_info.item(sell_orders) values($1)", [object])
+            .then(console.log)
+            .catch(console.log)
+    }
+
+    testJsonSelect() {
+        return this.client.query("select * from steam_info.item where hash_name is null", [])
+            .then(console.log)
+            .catch(console.log)
     }
 }
 
