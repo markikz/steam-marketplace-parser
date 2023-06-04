@@ -26,7 +26,11 @@ class MarketplaceParser {
     }
 
     sendRequestText(marketUrl) {
-        return this.proxyManager.fetchText(marketUrl);
+        return this.proxyManager.fetchText(marketUrl).then(response => {
+            if (response['success'])
+                return response['text'];
+            return undefined;
+        });
     }
 
     getItemsCount() {
@@ -38,25 +42,30 @@ class MarketplaceParser {
     }
 
     parsePage(page) {
-        return this.sendRequest(`${this.appUrl}&count=${this.itemsPerPage}&start=${page * this.itemsPerPage}`);
+        return this.sendRequest(`${this.appUrl}&count=${this.itemsPerPage}&start=${page * this.itemsPerPage}`)
+            .then(response => {
+                if (response['success']) {
+                    return response['results'];
+                }
+                throw response['error'];
+            }).catch(error => {
+                console.error(`Error parsing page: ${ page }, appid: ${ this.appid }`);
+                console.error(error);
+                return undefined;
+            });
     }
 
     parseAllItems() {
         this.getItemsCount().then(count => {
             this.intervalId = setInterval(async () => {
                 if (this.currentPage < (count / this.itemsPerPage)) {
-
-                    await this.parsePage(this.currentPage++).then(response => {
-                        if (response['success'] === true) {
-                            return this.writePageToDB(response['results']);
-                        } else {
-                            console.log('------------------success false');
-                            console.log(response);
-                            this.stop();
-                        }
-                    });
+                    const page = await this.parsePage(this.currentPage);
+                    if (page !== undefined) {
+                        this.currentPage++;
+                        await this.writePageToDB(page);
+                    }
                 } else {
-                    console.log('---------------------all items fetched');
+                    console.log('---------------------all items fetched for appid=' + this.appid);
                     this.stop();
                 }
             }, this.pageTimeout ?? MarketplaceParser.pageTimeout);
@@ -84,10 +93,10 @@ class MarketplaceParser {
 
     getItemId(hashName) {
         return this.sendRequestText(`${MarketplaceParser.baseItemUrl}/${this.appid}/${encodeURIComponent(hashName)}`)
-            .then(page => page.match(/Market_LoadOrderSpread\( *(\d+) *\)/)?.[1])
-            .catch(err => {
-                console.error(err);
-                return undefined;
+            .then(page => {
+                if (!page)
+                    throw new Error('Error getting item id by hashName: ' + hashName);
+                return page.match(/Market_LoadOrderSpread\( *(\d+) *\)/)?.[1];
             })
     }
 
@@ -104,17 +113,20 @@ class MarketplaceParser {
             .then(async count => {
 
                 let page = 0;
-                while (page < count / 1000) {
+                while (page < (count / 1000)) {
 
-                    await this.dbClient.getItemsByApp(this.appid, page).then(async items => {
-                        for (let item of items) {
-                            await this.fillItemId(item).then(() => this.timeout(250)).catch(err => {
-                                console.error('error getting steamid for ' + item['id']);
+                    const items = await this.dbClient.getItemsByApp(this.appid, page);
+                    let item = 0;
+                    while (item < items.length) {
+                        const success = await this.fillItemId(item).then(() => this.timeout(250))
+                            .then(() => true)
+                            .catch(err => {
+                                console.error(`error getting steamid for  ${ item['id'] } appid: ${ this.appid }`);
                                 console.error(err);
-                                throw err;
+                                return false;
                             });
-                        }
-                    });
+                        item += +success;
+                    }
                     page++;
                 }
             }).then(() => this.stop(), () => this.stop());
