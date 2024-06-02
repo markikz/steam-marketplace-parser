@@ -13,7 +13,7 @@ app.use(morgan('tiny'));
 app.use(cors());
 
 const proxyKey = process.env.proxy_key;
-const proxyArray = [ 'https://proxy-production-047b.up.railway.app', 'https://web-production-0dc19.up.railway.app', 'https://jolly-flowers-production.up.railway.app', 'https://fabulous-observation-production.up.railway.app', 'https://proxy4-production.up.railway.app', 'https://rare-drain-production.up.railway.app', 'https://web-production-e587.up.railway.app', 'https://proxy-production-3763.up.railway.app', 'https://abandoned-prose-production.up.railway.app', 'https://direct-mailbox-production.up.railway.app', ];
+const proxyArray = process.env.PROXY_HOSTS.split(' ');
 
 const parsers = {};
 const proxyManager = new ProxyUtils(proxyArray, proxyKey);

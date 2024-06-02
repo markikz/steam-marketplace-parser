@@ -6,7 +6,7 @@ import PostgresClient from "./PostgresClient/PostgresClient.js";
 dotenv.config();
 
 const proxyKey = process.env.proxy_key;
-const proxyArray = ['https://web-production-0dc19.up.railway.app'];
+const proxyArray = process.env.PROXY_HOSTS.split(' ');
 
 const proxyManager = new ProxyUtils(proxyArray, proxyKey);
 
