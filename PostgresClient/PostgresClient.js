@@ -8,15 +8,16 @@ class PostgresClient {
         values: [],
     };
 
-    static insertQuery = {
+    //todo не заполняется listings_update_date
+    static insertListingsQuery = {
         name: 'insert new item',
-        text: "insert into steam_info.item(hash_name, sell_price, currency, sell_listings, appid) values($1, $2, $3, $4, $5)",
+        text: "insert into steam_info.item(hash_name, listings_sell_price, listings_currency, listings_sell_listings, appid) values($1, $2, $3, $4, $5)",
         values: [],
     };
 
-    static updateQuery = {
+    static updateListingsQuery = {
         name: 'update item',
-        text: "update steam_info.item set sell_price=$1, currency=$2, sell_listings=$3, update_date=CURRENT_TIMESTAMP where id=$4",
+        text: "update steam_info.item set listings_sell_price=$1, listings_currency=$2, listings_sell_listings=$3,  listings_update_date=CURRENT_TIMESTAMP where id=$4",
         values: [],
     };
 
@@ -53,10 +54,11 @@ class PostgresClient {
     async insertOrUpdateItem(itemJson) {
         await this.client.query({...PostgresClient.selectQuery, values: [itemJson['hash_name'], itemJson['asset_description']['appid']]})
             .then(async res => {
+                //todo не правильно заполняется currency
                 const currency = itemJson['sell_price_text'].indexOf('$') !== -1 ? 1 : 0;
                 if (res.rows.length === 0) {
                     return this.client.query({
-                        ...PostgresClient.insertQuery, values: [
+                        ...PostgresClient.insertListingsQuery, values: [
                             itemJson['hash_name'],
                             itemJson['sell_price'],
                             currency,
@@ -66,7 +68,7 @@ class PostgresClient {
                     });
                 }
                 return this.client.query({
-                    ...PostgresClient.updateQuery, values: [
+                    ...PostgresClient.updateListingsQuery, values: [
                         itemJson['sell_price'],
                         currency,
                         itemJson['sell_listings'],
@@ -107,13 +109,13 @@ class PostgresClient {
     }
 
     testInsert() {
-        this.client.query({ ...PostgresClient.insertQuery, values: ['test', 1, 1, 1, 1]} )
+        this.client.query({ ...PostgresClient.insertListingsQuery, values: ['test', 1, 1, 1, 1]} )
             .then(console.log)
             .catch(console.log)
     }
 
     testUpdate(id) {
-        this.client.query({ ...PostgresClient.updateQuery, values: [2, 2, 2, id]} )
+        this.client.query({ ...PostgresClient.updateListingsQuery, values: [2, 2, 2, id]} )
             .then(console.log)
             .catch(console.log)
     }
