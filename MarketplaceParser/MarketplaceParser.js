@@ -1,4 +1,3 @@
-
 class MarketplaceParser {
     //https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=hash_name&sort_dir=desc&appid=730&norender=2&count=1&start=10
     static baseItemsListUrl = 'https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=popular&sort_dir=desc&norender=2'
@@ -10,6 +9,7 @@ class MarketplaceParser {
     static baseOrdersUrl = 'https://steamcommunity.com/market/itemordershistogram?country=EN&language=english'
 
     static pageTimeout = 5000;
+
     constructor(appid, proxy, onParserStop, dbClient, pageTimeout, currency) {
         if (!appid || !proxy)
             throw new Error('Missing required parameter[s]');
@@ -52,9 +52,14 @@ class MarketplaceParser {
                 if (response['success']) {
                     return response['results'];
                 }
-                throw response['error'];
+
+                if (response['error']) {
+                    throw response["error"]
+                } else {
+                    throw response;
+                }
             }).catch(error => {
-                console.error(`Error parsing page: ${ page }, appid: ${ this.appid }`);
+                console.error(`Error parsing page: ${page}, appid: ${this.appid}`);
                 console.error(error);
                 return undefined;
             });
@@ -74,10 +79,11 @@ class MarketplaceParser {
                     this.stop();
                 }
             }, this.pageTimeout ?? MarketplaceParser.pageTimeout);
-        }).then(() => this.stop(), () => this.stop());
+        }).catch((error) => this.stop(error));
     }
 
-    stop() {
+    stop(err) {
+        console.log(err);
         console.log('Stopping parser for appid = ' + this.appid);
 
         if (this.intervalId !== undefined) {
@@ -121,16 +127,17 @@ class MarketplaceParser {
                 while (page < (count / 1000)) {
 
                     const items = await this.dbClient.getItemsByApp(this.appid, page);
-                    let item = 0;
-                    while (item < items.length) {
+                    let item_counter = 0;
+                    while (item_counter < items.length) {
+                        let item = items[item_counter];
                         const success = await this.fillItemId(item).then(() => this.timeout(250))
                             .then(() => true)
                             .catch(err => {
-                                console.error(`error getting steamid for  ${ item['id'] } appid: ${ this.appid }`);
+                                console.error(`error getting steamid for  ${item['id']} appid: ${this.appid}`);
                                 console.error(err);
                                 return false;
                             });
-                        item += +success;
+                        item_counter += +success;
                     }
                     page++;
                 }
