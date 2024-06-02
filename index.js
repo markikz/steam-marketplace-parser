@@ -47,6 +47,32 @@ app.get('/startParseIds', (req, res) => {
     }
 })
 
+app.get('/startFillPriceOverviews', (req, res) => {
+    res.status(200);
+    const appid = req.query.appid;
+    if (appid && parsers[appid] !== undefined) {
+        res.send('{"status": false, "info": "parser with given appid already working"}');
+    } else {
+        const parser = new MarketplaceParser(appid, proxyManager, onParserStop, new PostgresClient(), req.query.currency);
+        parsers[appid] = parser;
+        parser.fillPriceOverviews();
+        res.send('{"status": true, "info": "parser of ids started working"}')
+    }
+})
+
+app.get('/startFillOrders', (req, res) => {
+    res.status(200);
+    const appid = req.query.appid;
+    if (appid && parsers[appid] !== undefined) {
+        res.send('{"status": false, "info": "parser with given appid already working"}');
+    } else {
+        const parser = new MarketplaceParser(appid, proxyManager, onParserStop, new PostgresClient(), req.query.currency);
+        parsers[appid] = parser;
+        parser.fillOrders();
+        res.send('{"status": true, "info": "parser of ids started working"}')
+    }
+})
+
 app.get('/stop', (req, res) => {
     res.status(200);
     const appid = req.query.appid;

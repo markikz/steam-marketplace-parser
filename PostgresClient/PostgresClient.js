@@ -38,6 +38,18 @@ class PostgresClient {
         values: [],
     };
 
+    static updatePriceOverviewQuery = {
+        name: 'update price overview',
+        text: "update steam_info.item set priceoverview_volume=$2, priceoverview_median_price=$3, priceoverview_currency=$4, priceoverview_update_date=CURRENT_TIMESTAMP where id=$1",
+        values: [],
+    };
+
+    static updateOrdersQuery = {
+        name: 'update orders',
+        text: "update steam_info.item set itemordershistogram_sell_orders=$2, itemordershistogram_buy_orders=$3, itemordershistogram_currency=$4, itemordershistogram_update_date=CURRENT_TIMESTAMP where id=$1",
+        values: [],
+    };
+
     constructor() {
         this.client = new Client();
     }
@@ -99,6 +111,17 @@ class PostgresClient {
         });
     }
 
+    updatePriceOverview(id, volume, median, currency) {
+        return this.client.query({
+            ...PostgresClient.updatePriceOverviewQuery, values: [id, volume, median, currency],
+        });
+    }
+
+    updateOrders(id, sellOrders, buyOrders, currency) {
+        return this.client.query({
+            ...PostgresClient.updateOrdersQuery, values: [id, sellOrders, buyOrders, currency],
+        });
+    }
 
     testSelect(hashName, appid) {
         return this.client.query({ ...PostgresClient.selectQuery, values: [hashName ?? 'test', appid ?? 1]} )

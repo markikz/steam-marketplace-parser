@@ -4,9 +4,13 @@ class MarketplaceParser {
     static baseItemsListUrl = 'https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=popular&sort_dir=desc&norender=2'
     //https://steamcommunity.com/market/listings/730/Revolution%20Case
     static baseItemUrl = 'https://steamcommunity.com/market/listings';
+    //https://steamcommunity.com/market/priceoverview/?currency=5&appid=730&market_hash_name=Operation%20Riptide%20Case
+    static basePriceOverviewUrl = 'https://steamcommunity.com/market/priceoverview/?';
+    //https://steamcommunity.com/market/itemordershistogram?country=EN&language=english&currency=1&item_nameid=176288467
+    static baseOrdersUrl = 'https://steamcommunity.com/market/itemordershistogram?country=EN&language=english'
 
     static pageTimeout = 5000;
-    constructor(appid, proxy, onParserStop, dbClient, pageTimeout) {
+    constructor(appid, proxy, onParserStop, dbClient, pageTimeout, currency) {
         if (!appid || !proxy)
             throw new Error('Missing required parameter[s]');
         this.appid = appid;
@@ -19,6 +23,7 @@ class MarketplaceParser {
         this.dbClient = dbClient;
         this.dbClient.connect();
         this.pageTimeout = pageTimeout;
+        this.currency = currency ?? 1;
     }
 
     sendRequest(marketUrl) {
@@ -130,6 +135,86 @@ class MarketplaceParser {
                     page++;
                 }
             }).then(() => this.stop(), () => this.stop());
+    }
+
+    getItemPriceOverview(hash_name) {
+        return this.sendRequest(`${ MarketplaceParser.basePriceOverviewUrl }currency=${this.currency}&appid=${this.appid}&market_hash_name=${encodeURIComponent(hash_name)}`)
+            .then(json => {
+                if (!json || !json['success']) {
+                    const err = json['error'] ?? json;
+                    throw new Error(`Error getting price overview for hashName: ${ hash_name }: ${ err }`,)
+                }
+                return json;
+            })
+    }
+
+    fillItemPriceOverview(item) {
+        return this.getItemPriceOverview(item['hash_name'])
+            .then(priceOverview => this.dbClient.updatePriceOverview(item['id'], priceOverview['volume'], priceOverview['median_price'], this.currency));
+    }
+
+    fillPriceOverviews() {
+        this.dbClient.getCountOfItems(this.appid)
+            .then(async count => {
+                let page = 0;
+                while (page < (count / 1000)) {
+
+                    const items = await this.dbClient.getItemsByApp(this.appid, page);
+                    let item_counter = 0;
+                    while (item_counter < items.length) {
+                        const item = items[item_counter];
+                        const success = await this.fillItemPriceOverview(item).then(() => this.timeout(250))
+                            .then(() => true)
+                            .catch(err => {
+                                console.error(`error filling price overview for dbId: ${ item['id'] }, appid: ${ this.appid }`);
+                                console.error(err);
+                                return false;
+                            });
+                        item_counter++;
+                    }
+                    page++;
+                }
+            });
+    }
+
+    getItemOrders(itemId) {
+        return this.sendRequest(`${ MarketplaceParser.baseOrdersUrl }&currency=${ this.currency }&item_nameid=${ itemId }`)
+            .then(json => {
+                if (!json || !json['success']) {
+                    const err = json['error'] ?? json;
+                    throw new Error(`Error getting orders for steamid: ${ itemId }: ${ err }`,)
+                }
+                return json;
+            });
+    }
+
+    fillItemPriceOverview(item) {
+        return this.getItemOrders(item['steamid'])
+            .then(orders => this.dbClient.updateOrders(item['id'], JSON.stringify(orders['sell_order_graph']), JSON.stringify(orders['buy_order_graph']), this.currency));
+    }
+
+    fillOrders() {
+        this.dbClient.getCountOfItems(this.appid)
+            .then(async count => {
+                let page = 0;
+                while (page < (count / 1000)) {
+
+                    const items = await this.dbClient.getItemsByApp(this.appid, page);
+                    let item_counter = 0;
+                    while (item_counter < items.length) {
+                        const item = items[item_counter];
+                        const success = await this.fillItemPriceOverview(item).then(() => this.timeout(250))
+                            .then(() => true)
+                            .catch(err => {
+                                console.error(`error filling price overview for dbId: ${ item['id'] }, appid: ${ this.appid }`);
+                                console.error(err);
+                                return false;
+                            });
+                        item_counter++;
+                    }
+                    page++;
+                }
+            });
     }
 }
 
