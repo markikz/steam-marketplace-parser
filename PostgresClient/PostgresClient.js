@@ -27,9 +27,21 @@ class PostgresClient {
         values: [],
     };
 
+    static countByAppIdAndSteamIdIsNotNullQuery = {
+        name: 'select count of items by app id',
+        text: "select count(*) as count from steam_info.item where appid=$1 and steamid is not null",
+        values: [],
+    };
+
     static getItemsByAppQuery = {
         name: 'select items by appid',
-        text: "select id, hash_name from steam_info.item where appid=$1 and steamid is null order by hash_name limit 1000 offset 1000*$2",
+        text: "select id, hash_name from steam_info.item where appid=$1 order by hash_name limit 1000 offset 1000*$2",
+        values: [],
+    };
+
+    static getItemsByAppAndSteamIdIsNotNullQuery = {
+        name: 'select items by appid',
+        text: "select id, hash_name from steam_info.item where appid=$1 and steamid is not null order by hash_name limit 1000 offset 1000*$2",
         values: [],
     };
 
@@ -98,6 +110,21 @@ class PostgresClient {
             console.log(res);
             return res.rows[0]['count'];
         }).catch(console.error);
+    }
+
+    getCountOfItemsByAppIdAndSteamIdIsNotNull(appid) {
+        return this.client.query({
+            ...PostgresClient.countByAppIdAndSteamIdIsNotNullQuery, values: [appid],
+        }).then(res => {
+            console.log(res);
+            return res.rows[0]['count'];
+        }).catch(console.error);
+    }
+
+    getItemsByAppAndSteamIdIsNotNull(appid, page) {
+        return this.client.query({
+            ...PostgresClient.getItemsByAppAndSteamIdIsNotNullQuery, values: [appid, page],
+        }).then(res => res.rows);
     }
 
     getItemsByApp(appid, page) {
