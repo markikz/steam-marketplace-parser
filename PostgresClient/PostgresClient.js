@@ -1,4 +1,5 @@
 import pg from "pg";
+
 const {Client} = pg;
 
 class PostgresClient {
@@ -8,10 +9,9 @@ class PostgresClient {
         values: [],
     };
 
-    //todo не заполняется listings_update_date
     static insertListingsQuery = {
         name: 'insert new item',
-        text: "insert into steam_info.item(hash_name, listings_sell_price, listings_currency, listings_sell_listings, appid) values($1, $2, $3, $4, $5)",
+        text: "insert into steam_info.item(hash_name, listings_sell_price, listings_currency, listings_sell_listings, appid, listings_update_date) values($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)",
         values: [],
     };
 
@@ -76,11 +76,15 @@ class PostgresClient {
     }
 
     async insertOrUpdateItem(itemJson) {
-        await this.client.query({...PostgresClient.selectQuery, values: [itemJson['hash_name'], itemJson['asset_description']['appid']]})
+        await this.client.query({
+            ...PostgresClient.selectQuery,
+            values: [itemJson['hash_name'], itemJson['asset_description']['appid']]
+        })
             .then(async res => {
-                //todo не правильно заполняется currency
+                //todo не правильно заполняется currency, должно быть то что переданно в запросе
                 const currency = itemJson['sell_price_text'].indexOf('$') !== -1 ? 1 : 0;
                 if (res.rows.length === 0) {
+                    console.log('insert ' + itemJson['hash_name']);
                     return this.client.query({
                         ...PostgresClient.insertListingsQuery, values: [
                             itemJson['hash_name'],
@@ -91,6 +95,8 @@ class PostgresClient {
                         ]
                     });
                 }
+
+                console.log('update ' + itemJson['hash_name']);
                 return this.client.query({
                     ...PostgresClient.updateListingsQuery, values: [
                         itemJson['sell_price'],
@@ -153,19 +159,19 @@ class PostgresClient {
     }
 
     testSelect(hashName, appid) {
-        return this.client.query({ ...PostgresClient.selectQuery, values: [hashName ?? 'test', appid ?? 1]} )
+        return this.client.query({...PostgresClient.selectQuery, values: [hashName ?? 'test', appid ?? 1]})
             .then(console.log)
             .catch(console.log)
     }
 
     testInsert() {
-        this.client.query({ ...PostgresClient.insertListingsQuery, values: ['test', 1, 1, 1, 1]} )
+        this.client.query({...PostgresClient.insertListingsQuery, values: ['test', 1, 1, 1, 1]})
             .then(console.log)
             .catch(console.log)
     }
 
     testUpdate(id) {
-        this.client.query({ ...PostgresClient.updateListingsQuery, values: [2, 2, 2, id]} )
+        this.client.query({...PostgresClient.updateListingsQuery, values: [2, 2, 2, id]})
             .then(console.log)
             .catch(console.log)
     }

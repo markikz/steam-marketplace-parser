@@ -17,6 +17,7 @@ const proxyArray = process.env.PROXY_HOSTS.split(' ');
 
 const parsers = {};
 const proxyManager = new ProxyUtils(proxyArray, proxyKey);
+proxyManager.init();
 
 const onParserStop = (appid) => {
     parsers[appid] = undefined;

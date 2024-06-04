@@ -1,6 +1,6 @@
 class MarketplaceParser {
     //https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=hash_name&sort_dir=desc&appid=730&norender=2&count=1&start=10
-    static baseItemsListUrl = 'https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=popular&sort_dir=desc&norender=2'
+    static baseItemsListUrl = 'https://steamcommunity.com/market/search/render/?search_descriptions=1&sort_column=name&sort_dir=desc&norender=2'
     //https://steamcommunity.com/market/listings/730/Revolution%20Case
     static baseItemUrl = 'https://steamcommunity.com/market/listings';
     //https://steamcommunity.com/market/priceoverview/?currency=5&appid=730&market_hash_name=Operation%20Riptide%20Case
@@ -77,20 +77,23 @@ class MarketplaceParser {
     }
 
     parseAllItems() {
-        this.getItemsCount().then(count => {
-            this.intervalId = setInterval(async () => {
-                if (this.currentPage < (count / this.itemsPerPage)) {
-                    const page = await this.parsePage(this.currentPage);
-                    if (page !== undefined) {
-                        this.currentPage++;
-                        await this.writePageToDB(page);
+        this.getItemsCount()
+            .then(async (count) => {
+                while (true) {
+                    if (this.currentPage < (count / this.itemsPerPage)) {
+                        const page = await this.parsePage(this.currentPage);
+                        if (page !== undefined) {
+                            this.currentPage++;
+                            await this.writePageToDB(page).then(() => this.timeout(1));
+                        }
+                    } else {
+                        console.log('---------------------all items fetched for appid=' + this.appid);
+                        this.stop();
+                        return
                     }
-                } else {
-                    console.log('---------------------all items fetched for appid=' + this.appid);
-                    this.stop();
                 }
-            }, this.pageTimeout ?? MarketplaceParser.pageTimeout);
-        }).catch((error) => this.stop(error));
+            })
+            .catch((error) => this.stop(error));
     }
 
     stop(err) {
@@ -108,6 +111,7 @@ class MarketplaceParser {
     }
 
     async writePageToDB(resultArray) {
+        console.log(resultArray.length);
         for (let item of resultArray) {
             await this.dbClient.insertOrUpdateItem(item);
         }
@@ -182,11 +186,14 @@ class MarketplaceParser {
                     let item_counter = 0;
                     while (item_counter < items.length) {
                         const item = items[item_counter];
-                        const success = await this.fillItemPriceOverview(item).then(() => this.timeout(250))
+                        const success = await this.fillItemPriceOverview(item)
+                            .then(() => this.timeout(100))
                             .then(() => true)
                             .catch(err => {
+                                this.timeout(100)
                                 console.error(`error filling price overview for dbId: ${item['id']}, appid: ${this.appid}`);
                                 console.error(err);
+                                console.log(page * 1000 + item_counter);
                                 return false;
                             });
                         item_counter++;
