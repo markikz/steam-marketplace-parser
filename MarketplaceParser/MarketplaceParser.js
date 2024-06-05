@@ -122,6 +122,7 @@ class MarketplaceParser {
     fillItemIds() {
         this.dbClient.getCountOfItems(this.appid)
             .then(async count => {
+                console.log(`Count of items to process: ${ count }`);
 
                 let page = 0;
                 while (page < (count / 1000)) {
@@ -161,12 +162,13 @@ class MarketplaceParser {
     }
 
     fillPriceOverviews() {
-        this.dbClient.getCountOfItems(this.appid)
+        this.dbClient.getCountOfItemsWithSteamID(this.appid)
             .then(async count => {
+                console.log(`Count of items to process: ${ count }`);
                 let page = 0;
                 while (page < (count / 1000)) {
 
-                    const items = await this.dbClient.getItemsByApp(this.appid, page);
+                    const items = await this.dbClient.getItemsByAppWithSteamID(this.appid, page);
                     let item_counter = 0;
                     while (item_counter < items.length) {
                         const item = items[item_counter];
@@ -195,14 +197,15 @@ class MarketplaceParser {
             });
     }
 
-    fillItemPriceOverview(item) {
+    fillItemOrders(item) {
         return this.getItemOrders(item['steamid'])
             .then(orders => this.dbClient.updateOrders(item['id'], JSON.stringify(orders['sell_order_graph']), JSON.stringify(orders['buy_order_graph']), this.currency));
     }
 
     fillOrders() {
-        this.dbClient.getCountOfItems(this.appid)
+        this.dbClient.getCountOfItemsWithSteamID(this.appid)
             .then(async count => {
+                console.log(`Count of items to process: ${ count }`);
                 let page = 0;
                 while (page < (count / 1000)) {
 
@@ -210,10 +213,10 @@ class MarketplaceParser {
                     let item_counter = 0;
                     while (item_counter < items.length) {
                         const item = items[item_counter];
-                        const success = await this.fillItemPriceOverview(item).then(() => this.timeout(250))
+                        const success = await this.fillItemOrders(item).then(() => this.timeout(250))
                             .then(() => true)
                             .catch(err => {
-                                console.error(`error filling price overview for dbId: ${ item['id'] }, appid: ${ this.appid }`);
+                                console.error(`error filling orders for dbId: ${ item['id'] }, appid: ${ this.appid }`);
                                 console.error(err);
                                 return false;
                             });
