@@ -228,10 +228,11 @@ class MarketplaceParser {
                 let page = 0;
                 while (page < (count / 1000)) {
 
-                    const items = await this.dbClient.getItemsByAppAndSteamIdIsNotNull(this.appid, page);
+                    const items = await this.dbClient.getItemsByAppWithSteamID(this.appid, page);
                     let item_counter = 0;
                     while (item_counter < items.length) {
                         const item = items[item_counter];
+                        console.log(item);
                         const success = await this.fillItemOrders(item).then(() => this.timeout(250))
                             .then(() => true)
                             .catch(err => {
