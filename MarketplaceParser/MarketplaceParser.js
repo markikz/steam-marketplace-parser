@@ -217,7 +217,6 @@ class MarketplaceParser {
     }
 
     fillItemOrders(item) {
-    fillItemOrders(item) {
         return this.getItemOrders(item['steamid'])
             .then(orders => this.dbClient.updateOrders(item['id'], JSON.stringify(orders['sell_order_graph']), JSON.stringify(orders['buy_order_graph']), this.currency));
     }
