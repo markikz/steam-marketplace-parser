@@ -147,10 +147,11 @@ class MarketplaceParser {
                         let item = items[item_counter];
                         if (!item['steamid']) {
                             const success = await this.fillItemId(item)
-                                .then(() => this.timeout(250))
+                                .then(() => this.timeout(3750))
                                 .catch(err => {
                                     console.error(`error getting steamid for  ${item['id']} appid: ${this.appid}`);
                                     console.error(err);
+                                    this.timeout(6000);
                                     return false;
                                 });
                         }
@@ -178,13 +179,13 @@ class MarketplaceParser {
     }
 
     fillPriceOverviews() {
-        this.dbClient.getCountOfItemsWithSteamID(this.appid)
+        this.dbClient.getCountOfItems(this.appid)
             .then(async count => {
                 console.log(`Count of items to process: ${ count }`);
                 let page = 0;
                 while (page < (count / 1000)) {
 
-                    const items = await this.dbClient.getItemsByAppWithSteamID(this.appid, page);
+                    const items = await this.dbClient.getItemsByApp(this.appid, page);
                     let item_counter = 0;
                     while (item_counter < items.length) {
                         const item = items[item_counter];
@@ -222,7 +223,7 @@ class MarketplaceParser {
     }
 
     fillOrders() {
-        this.dbClient.getCountOfItemsWithSteamID(this.appid)
+        this.dbClient.getCountOfItemsWithSteamId(this.appid)
             .then(async count => {
                 console.log(`Count of items to process: ${ count }`);
                 let page = 0;

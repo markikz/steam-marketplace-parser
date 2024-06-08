@@ -23,11 +23,17 @@ class PostgresClient {
 
     static countByAppQuery = {
         name: 'select count of items by app id',
+        text: "select count(*) as count from steam_info.item where appid=$1",
+        values: [],
+    };
+
+    static countByAppQueryWithSteamIdIsNull = {
+        name: 'select count of items by app id',
         text: "select count(*) as count from steam_info.item where appid=$1 and steamid is null",
         values: [],
     };
 
-    static countByAppWithSteamIDQuery = {
+    static countByAppWithSteamIdQuery = {
         name: 'select count of items by app id',
         text: "select count(*) as count from steam_info.item where appid=$1 and steamid is not null",
         values: [],
@@ -35,7 +41,7 @@ class PostgresClient {
 
     static getItemsByAppQuery = {
         name: 'select items by appid',
-        text: "select id, hash_name from steam_info.item where appid=$1 order by hash_name limit 1000 offset 1000*$2",
+        text: "select id, hash_name, steamid from steam_info.item where appid=$1 order by hash_name limit 1000 offset 1000*$2",
         values: [],
     };
 
@@ -109,6 +115,15 @@ class PostgresClient {
             .catch(console.log)
     }
 
+    getCountOfItemsWithSteamIdIsNull(appid) {
+        return this.client.query({
+            ...PostgresClient.countByAppQueryWithSteamIdIsNull, values: [appid],
+        }).then(res => {
+            console.log(res);
+            return res.rows[0]['count'];
+        });
+    }
+
     getCountOfItems(appid) {
         return this.client.query({
             ...PostgresClient.countByAppQuery, values: [appid],
@@ -118,9 +133,9 @@ class PostgresClient {
         });
     }
 
-    getCountOfItemsWithSteamID(appid) {
+    getCountOfItemsWithSteamId(appid) {
         return this.client.query({
-            ...PostgresClient.countByAppWithSteamIDQuery, values: [appid],
+            ...PostgresClient.countByAppWithSteamIdQuery, values: [appid],
         }).then(res => {
             console.log(res);
             return res.rows[0]['count'];
