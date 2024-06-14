@@ -38,15 +38,19 @@ class MarketplaceParser {
     }
 
     sendRequest(marketUrl) {
-        return this.proxyManager.fetch(marketUrl);
+        return this.proxyManager.fetch(marketUrl).then(response => {
+            if (response['success']) {
+                if (response['text']) {
+                    return response['text'];
+                }
+                return response;
+            }
+            return undefined;
+        });
     }
 
     sendRequestText(marketUrl) {
-        return this.proxyManager.fetchText(marketUrl).then(response => {
-            if (response['success'])
-                return response['text'];
-            return undefined;
-        });
+        return this.proxyManager.fetchText(marketUrl);
     }
 
     getItemsCount() {
@@ -137,7 +141,7 @@ class MarketplaceParser {
     fillItemIds() {
         this.dbClient.getCountOfItems(this.appid)
             .then(async count => {
-                console.log(`Count of items to process: ${ count }`);
+                console.log(`Count of items to process: ${count}`);
 
                 let page = 0;
                 while (page < (count / 1000)) {
@@ -147,12 +151,11 @@ class MarketplaceParser {
                         let item = items[item_counter];
                         if (!item['steamid']) {
                             const success = await this.fillItemId(item)
-                                .then(() => this.timeout(3750))
+                                .then(() => this.timeout(500))
                                 .catch(err => {
                                     console.error(`error getting steamid for  ${item['id']} appid: ${this.appid}`);
                                     console.error(err);
-                                    this.timeout(6000);
-                                    return false;
+                                    return this.timeout(1000).then(() => false);
                                 });
                         }
                         item_counter++;
@@ -181,7 +184,7 @@ class MarketplaceParser {
     fillPriceOverviews() {
         this.dbClient.getCountOfItems(this.appid)
             .then(async count => {
-                console.log(`Count of items to process: ${ count }`);
+                console.log(`Count of items to process: ${count}`);
                 let page = 0;
                 while (page < (count / 1000)) {
 
@@ -225,7 +228,7 @@ class MarketplaceParser {
     fillOrders() {
         this.dbClient.getCountOfItemsWithSteamId(this.appid)
             .then(async count => {
-                console.log(`Count of items to process: ${ count }`);
+                console.log(`Count of items to process: ${count}`);
                 let page = 0;
                 while (page < (count / 1000)) {
 

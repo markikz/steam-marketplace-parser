@@ -1,0 +1,15 @@
+{
+  "name": "csgo-tm",
+  "version": "1.0.4",
+  "dependencies": {
+    "request": "^2.79.0",
+    "apiqueue": "^1.0.0",
+    "uws": "^0.14.5"
+  },
+  "description": "API library for csgo.tm market",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

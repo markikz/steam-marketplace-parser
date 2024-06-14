@@ -17,11 +17,11 @@ const proxyArray = process.env.PROXY_HOSTS.split(' ');
 
 const parsers = {};
 const proxyManager = new ProxyUtils(proxyArray, proxyKey);
-proxyManager.init();
 
 const onParserStop = (appid) => {
     parsers[appid] = undefined;
 }
+
 app.get('/startParseNames', (req, res) => {
     res.status(200);
     const appid = req.query.appid;
