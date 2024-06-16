@@ -1,9 +1,11 @@
 import CSGOTM from "./csgo-tm/index.js"
 import dotenv from "dotenv"
+import PostgresClient from "./PostgresClient/PostgresClient.js";
 
 dotenv.config();
 
 let market = new CSGOTM(process.env.TM_API_KEY);
+let postgres = new PostgresClient();
 
 market.socket.connect();
 
@@ -19,9 +21,7 @@ market.on('connected', function () {
                         return console.error("err: " + err);
                     }
                     console.log('Authorization successful');
-                    market.socket.subscribe('history_go');
                     market.socket.subscribe('newitems_go');
-                    market.socket.subscribe('newitems_cs');
 
                 })
             }, 25000);
@@ -29,19 +29,11 @@ market.on('connected', function () {
             return console.error("err: " + err);
         }
         console.log('Authorization successful');
-        market.socket.subscribe('history_go'); // слушаем канал проданных вещей
+        market.socket.subscribe('newitems_go'); // слушаем канал проданных вещей
     });
 });
 
-market.on('history_go', function (mess) {
-    console.log(mess)
-})
-
 market.on('newitems_go', function (mess) {
-    console.log(mess)
-})
-
-market.on('newitems_cs', function (mess) {
     console.log(mess)
 })
 

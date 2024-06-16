@@ -69,6 +69,18 @@ class PostgresClient {
         values: [],
     };
 
+    static countForExport = {
+        name: 'countForExport',
+        text: "select count(*) from steam_info.item where appid=$1 and listings_sell_listings >= $2 and listings_sell_price >= $3 and listings_sell_price <= $4 and listings_currency = $5 and DATE_PART('days',(CURRENT_TIMESTAMP - listings_update_date)) <= $6 and DATE_PART('days',(CURRENT_TIMESTAMP - itemordershistogram_update_date)) <= $7",
+        values: [],
+    };
+
+    static getForExport = {
+        name: 'getForExport',
+        text: "select * from steam_info.item where appid=$2 and listings_sell_listings >= $3 and listings_sell_price >= $4 and listings_sell_price <= $5 and listings_currency = $6 and DATE_PART('days',(CURRENT_TIMESTAMP - listings_update_date)) <= $7 and DATE_PART('days',(CURRENT_TIMESTAMP - itemordershistogram_update_date)) <= $8 limit 1000 offset 1000*$1",
+        values: [],
+    };
+
     constructor() {
         this.client = new Client();
     }
@@ -140,6 +152,36 @@ class PostgresClient {
             console.log(res);
             return res.rows[0]['count'];
         });
+    }
+
+    getCountOfItemsForExport(appid,
+                             minListingsSellListings,
+                             minListingsSellPrice,
+                             maxListingsSellPrice,
+                             listingsCurrency,
+                             daysFromLastListingsUpdate,
+                             daysFromLastItemordershistogramUpdate) {
+        return this.client.query({
+            ...PostgresClient.countForExport,
+            values: [appid, minListingsSellListings, minListingsSellPrice, maxListingsSellPrice, listingsCurrency, daysFromLastListingsUpdate, daysFromLastItemordershistogramUpdate],
+        }).then(res => {
+            console.log(res);
+            return res.rows[0]['count'];
+        });
+    }
+
+    getItemsForExport(page,
+                      appid,
+                      minListingsSellListings,
+                      minListingsSellPrice,
+                      maxListingsSellPrice,
+                      listingsCurrency,
+                      daysFromLastListingsUpdate,
+                      daysFromLastItemordershistogramUpdate) {
+        return this.client.query({
+            ...PostgresClient.getForExport,
+            values: [page, appid, minListingsSellListings, minListingsSellPrice, maxListingsSellPrice, listingsCurrency, daysFromLastListingsUpdate, daysFromLastItemordershistogramUpdate],
+        }).then(res => res.rows);
     }
 
     getItemsByApp(appid, page) {
